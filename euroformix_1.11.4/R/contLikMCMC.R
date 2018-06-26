@@ -98,7 +98,7 @@ contLikMCMC = function(mlefit,niter=1e4,delta=10,maxxi=1) {
   logpX <- logdmvnorm(postth,mean=th0,cholC=C) #insert with Normal-approx of post-th
   #plot(postlogL,ty="l")
   #plot(logpX,ty="l")
-  margL <- 1/mean(exp(logpX - postlogL)) #estimated marginal likelihood
+  margL <- 1/mean(exp(logpX - postlogL - 100)) #estimated marginal likelihood
  }
 # nU <- nC-ret$nK #number of unknowns
 # if(nU>1) { #if more than 1 unknown 

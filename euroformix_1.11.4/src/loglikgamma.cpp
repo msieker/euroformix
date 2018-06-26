@@ -351,17 +351,22 @@ void loglikgammaC(double *logPE, double *theta, int *np,int *nC, int *nK, int *n
   theta[*nC-1] = theta[*nC-1]/theta[*nC]; //mu and sigma to tau
   Mat<int> *condMatrix; //conditional matrix for each contributor (values equal Gset-indices)
   condMatrix = new Mat<int>(condRef, *nL, *nC,false); //insert condRef-matrix directly
-  for(i=0; i<*nL; i++) {  //for each loci we need to run the recursion:
-   	 recurseClassStutterRep *rec = new recurseClassStutterRep(nS, pC, &pG[CnG[i]],&pA[CnAall[i]] ,condMatrix->row(i),&allA[CnA[(*nS)*i]],&allY[CnA[(*nS)*i]], &Gvec[CnG2[i]], nC, &nA[(*nS)*i], &nAall[i],&nG[i],  &mvec, &allAbpind[CnAall[i]], &theta[*nC-1]  , t0, fst, &mkvec[CnAall[i]], &nkval[i], lambda, &bp[CnAall[i]]); //create object of recursion
-     Li = rec->bigsum; //extract likelihood
-     delete rec; //delete recurse object
-     if(Li==0) { //if the likelihood hits 0
-      *logPE = -INFVAL;
-	  break;  //stop and return
-     } else {
-      *logPE = (*logPE) + log(Li);		 
-	 }
-  } //end for each loci i:
+  double sum_pe = 0;
+	bool has_zero = false;
+	#pragma omp parallel for schedule(dynamic) reduction(+:sum_pe), reduction(|: has_zero)
+	for (i = 0; i < *nL; i++)
+	{                                                                                                                                                                                                                                                                                                                                         //for each loci we need to run the recursion:
+		recurseClassStutterRep *rec = new recurseClassStutterRep(nS, pC, &pG[CnG[i]], &pA[CnAall[i]], condMatrix->row(i), &allA[CnA[(*nS) * i]], &allY[CnA[(*nS) * i]], &Gvec[CnG2[i]], nC, &nA[(*nS) * i], &nAall[i], &nG[i], &mvec, &allAbpind[CnAall[i]], &theta[*nC - 1], t0, fst, &mkvec[CnAall[i]], &nkval[i], lambda, &bp[CnAall[i]]); //create object of recursion
+		sum_pe += log(rec->bigsum);
+		has_zero |= rec->bigsum == 0;
+		delete rec;                                                                                                                                                                                                                                                                                                                           //delete recurse object
+	}                                                                                                                                                                                                                                                                                                                                         //end for each loci i:
+		
+	if(has_zero){
+		*logPE = -INFVAL;            
+	} else{
+		*logPE = sum_pe;
+	}
 
   delete condMatrix;
  } else { //end calculations
